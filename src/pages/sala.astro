@@ -1,0 +1,448 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Sala — Cartas de Mesa">
+  <main class="flex flex-1 flex-col gap-4 py-6">
+    <div class="flex items-center justify-between text-sm text-mist">
+      <a href="/" id="link-salir">Salir</a>
+      <span id="etiqueta-codigo" class="font-display font-bold text-paper"></span>
+      <span id="etiqueta-ronda"></span>
+    </div>
+
+    <p id="error" class="hidden text-center text-coral">
+      Esa sala no es válida. <a href="/" class="underline">Volver al inicio</a>
+    </p>
+
+    <p id="conectando" class="text-center text-mist">Conectando con la sala…</p>
+
+    <!-- LOBBY -->
+    <section id="vista-lobby" class="hidden flex-1 flex-col gap-5">
+      <div class="text-center">
+        <p class="text-sm text-mist">Compartí este código</p>
+        <p id="codigo-grande" class="font-display text-3xl font-black tracking-wide"></p>
+        <div class="mt-3 flex justify-center gap-3">
+          <button
+            id="btn-copiar"
+            type="button"
+            class="rounded-lg border-2 border-mist/40 px-4 py-2 text-sm font-bold"
+          >
+            Copiar
+          </button>
+          <button
+            id="btn-compartir"
+            type="button"
+            class="hidden rounded-lg border-2 border-mist/40 px-4 py-2 text-sm font-bold"
+          >
+            Compartir
+          </button>
+        </div>
+        <p id="copiado" class="mt-1 hidden text-sm text-mustard-dim" role="status">¡Copiado!</p>
+      </div>
+
+      <div>
+        <p class="mb-2 text-sm font-bold uppercase tracking-wide text-mist">Jugadores conectados</p>
+        <div id="lista-lobby" class="flex flex-col gap-2"></div>
+      </div>
+
+      <button
+        id="btn-empezar"
+        type="button"
+        class="card-face mt-auto hidden bg-mustard py-4 font-display font-bold text-ink active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:opacity-40"
+      >
+        Empezar partida
+      </button>
+      <p id="msg-esperando-anfitrion" class="mt-auto text-center text-mist">
+        Esperando a que el anfitrión empiece la partida…
+      </p>
+      <p id="msg-faltan-jugadores" class="hidden text-center text-sm text-mist"></p>
+    </section>
+
+    <!-- JUEGO -->
+    <section id="vista-juego" class="hidden flex-1 flex-col gap-4">
+      <div id="marcador" class="flex flex-wrap gap-2 text-xs"></div>
+
+      <section>
+        <p class="mb-2 text-sm font-bold uppercase tracking-wide text-mist">Carta de la ronda</p>
+        <article
+          id="carta-negra"
+          class="card-face flex min-h-28 items-center bg-ink-2 px-5 py-6 font-display text-xl font-bold text-paper"
+        >
+        </article>
+      </section>
+
+      <p id="zona-estado" class="text-center font-display font-bold text-paper"></p>
+
+      <div id="mano" class="grid flex-1 grid-cols-2 gap-3"></div>
+
+      <div id="revelo" class="hidden flex flex-1 flex-col gap-3">
+        <p id="revelo-titulo" class="text-sm font-bold uppercase tracking-wide text-mist"></p>
+        <div id="revelo-lista" class="flex flex-col gap-3"></div>
+      </div>
+
+      <div id="resultado" class="hidden flex-col gap-3">
+        <div id="resultado-carta" class="card-face bg-mustard px-5 py-6 font-display font-bold text-ink"></div>
+        <button
+          id="btn-siguiente"
+          type="button"
+          class="card-face bg-mustard py-4 font-display font-bold text-ink active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+        >
+          Siguiente ronda →
+        </button>
+      </div>
+    </section>
+
+    <!-- FIN DEL JUEGO -->
+    <section id="vista-fin" class="hidden flex-1 flex-col gap-5">
+      <h1 class="text-center font-display text-2xl font-black">¡Se terminó la partida!</h1>
+      <div id="ranking-final" class="flex flex-col gap-2"></div>
+      <a
+        href="/"
+        class="card-face mt-auto bg-mustard py-4 text-center font-display font-bold text-ink active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+      >
+        Volver al inicio
+      </a>
+    </section>
+  </main>
+</Layout>
+
+<script>
+  import { connectToRoom, getDeviceToken, saveDeviceName, type Room } from "../lib/p2p/room";
+  import { normalizeRoomCode, isValidRoomCode } from "../lib/p2p/roomCode";
+  import { HostEngine, type PersonalizedState } from "../lib/p2p/hostEngine";
+
+  const params = new URLSearchParams(window.location.search);
+  const rawCode = params.get("code") ?? "";
+  const code = normalizeRoomCode(rawCode);
+  const isHost = params.get("host") === "1";
+  const name = (params.get("name") ?? "").trim() || "Jugador";
+  const token = getDeviceToken();
+
+  saveDeviceName(name);
+
+  const errorEl = document.getElementById("error")!;
+  const conectandoEl = document.getElementById("conectando")!;
+  const etiquetaCodigo = document.getElementById("etiqueta-codigo")!;
+  const etiquetaRonda = document.getElementById("etiqueta-ronda")!;
+
+  if (!isValidRoomCode(code)) {
+    errorEl.classList.remove("hidden");
+    conectandoEl.classList.add("hidden");
+    throw new Error("Código de sala inválido");
+  }
+
+  etiquetaCodigo.textContent = code;
+
+  // --- Render (referencias al DOM y función render() van primero: se usan
+  // apenas se conecta a la sala, así que tienen que existir antes de eso) ---
+
+  const vistaLobby = document.getElementById("vista-lobby")!;
+  const vistaJuego = document.getElementById("vista-juego")!;
+  const vistaFin = document.getElementById("vista-fin")!;
+
+  const codigoGrande = document.getElementById("codigo-grande")!;
+  const listaLobby = document.getElementById("lista-lobby")!;
+  const btnEmpezar = document.getElementById("btn-empezar") as HTMLButtonElement;
+  const msgEsperandoAnfitrion = document.getElementById("msg-esperando-anfitrion")!;
+  const msgFaltanJugadores = document.getElementById("msg-faltan-jugadores")!;
+
+  const marcador = document.getElementById("marcador")!;
+  const cartaNegra = document.getElementById("carta-negra")!;
+  const zonaEstado = document.getElementById("zona-estado")!;
+  const manoEl = document.getElementById("mano")!;
+  const reveloEl = document.getElementById("revelo")!;
+  const reveloTitulo = document.getElementById("revelo-titulo")!;
+  const reveloLista = document.getElementById("revelo-lista")!;
+  const resultadoEl = document.getElementById("resultado")!;
+  const resultadoCarta = document.getElementById("resultado-carta")!;
+  const btnSiguiente = document.getElementById("btn-siguiente") as HTMLButtonElement;
+
+  const rankingFinal = document.getElementById("ranking-final")!;
+
+  btnEmpezar.addEventListener("click", requestStart);
+  btnSiguiente.addEventListener("click", requestAdvance);
+
+  function scoreRow(name: string, score: number, extra: string): HTMLElement {
+    const row = document.createElement("div");
+    row.className = "card-face flex items-center justify-between bg-paper px-4 py-3 text-ink";
+    const label = document.createElement("span");
+    label.className = "font-display font-bold";
+    label.textContent = name + (extra ? ` ${extra}` : "");
+    const pts = document.createElement("span");
+    pts.className = "font-display font-black";
+    pts.textContent = String(score);
+    row.append(label, pts);
+    return row;
+  }
+
+  function render(state: PersonalizedState) {
+    etiquetaRonda.textContent = state.phase === "lobby" ? "" : `Ronda ${state.round}`;
+
+    vistaLobby.classList.toggle("hidden", state.phase !== "lobby");
+    vistaJuego.classList.toggle(
+      "hidden",
+      !(state.phase === "playing" || state.phase === "judging" || state.phase === "roundEnd")
+    );
+    vistaFin.classList.toggle("hidden", state.phase !== "gameOver");
+
+    if (state.phase === "lobby") {
+      codigoGrande.textContent = state.roomCode;
+      listaLobby.innerHTML = "";
+      for (const p of state.players) {
+        const row = document.createElement("div");
+        row.className = "card-face flex items-center justify-between bg-paper px-4 py-3 text-ink";
+        const label = document.createElement("span");
+        label.className = "font-display font-bold";
+        label.textContent = p.name + (p.isYou ? " (vos)" : "") + (!p.connected ? " · desconectado" : "");
+        row.appendChild(label);
+        listaLobby.appendChild(row);
+      }
+
+      btnEmpezar.classList.toggle("hidden", !isHost);
+      msgEsperandoAnfitrion.classList.toggle("hidden", isHost);
+      if (isHost) {
+        btnEmpezar.disabled = !state.canStart;
+        msgFaltanJugadores.classList.toggle("hidden", state.canStart);
+        if (!state.canStart) {
+          const faltan = Math.max(0, 3 - state.players.filter((p) => p.connected).length);
+          msgFaltanJugadores.textContent =
+            faltan > 0 ? `Faltan al menos ${faltan} jugador(es) para empezar (mínimo 3).` : "";
+        }
+      }
+      return;
+    }
+
+    if (state.phase === "gameOver") {
+      rankingFinal.innerHTML = "";
+      (state.gameOverRanking ?? []).forEach((p, i) => {
+        rankingFinal.appendChild(scoreRow(p.name, p.score, i === 0 ? "🏆" : ""));
+      });
+      return;
+    }
+
+    // playing / judging / roundEnd
+    marcador.innerHTML = "";
+    for (const p of state.players) {
+      const chip = document.createElement("span");
+      chip.className =
+        "rounded-full border-2 border-mist/40 px-3 py-1 " +
+        (p.isJudge ? "border-mustard text-mustard" : "text-mist");
+      chip.textContent = `${p.name}${p.isYou ? " (vos)" : ""}: ${p.score}`;
+      marcador.appendChild(chip);
+    }
+
+    cartaNegra.textContent = state.blackCard?.text ?? "";
+
+    manoEl.innerHTML = "";
+    reveloEl.classList.add("hidden");
+    resultadoEl.classList.add("hidden");
+    resultadoEl.classList.remove("flex");
+
+    if (state.phase === "playing") {
+      if (state.isJudge) {
+        zonaEstado.textContent = `Sos el juez · esperando cartas (${state.submittedCount}/${state.totalToSubmit})`;
+      } else if (state.hasPlayed) {
+        zonaEstado.textContent = `Jugaste tu carta · esperando a los demás (${state.submittedCount}/${state.totalToSubmit})`;
+      } else {
+        zonaEstado.textContent = `Elegí tu carta · juzga ${state.judgeName}`;
+        for (const carta of state.hand) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className =
+            "card-face flex min-h-24 items-center bg-paper p-3 text-left text-sm font-bold text-ink transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
+          btn.textContent = carta.text;
+          btn.addEventListener("click", () => requestPlay(carta.id));
+          manoEl.appendChild(btn);
+        }
+      }
+      return;
+    }
+
+    if (state.phase === "judging") {
+      reveloEl.classList.remove("hidden");
+      reveloTitulo.textContent = state.isJudge
+        ? "Leé las cartas y elegí la ganadora"
+        : `${state.judgeName} está leyendo las cartas…`;
+      reveloLista.innerHTML = "";
+      for (const sub of state.reveal ?? []) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.disabled = !state.isJudge;
+        btn.className =
+          "card-face flex min-h-20 items-center bg-paper p-4 text-left font-bold text-ink transition " +
+          (state.isJudge ? "active:translate-x-[2px] active:translate-y-[2px] active:shadow-none" : "opacity-90");
+        btn.textContent = sub.card.text;
+        if (state.isJudge) btn.addEventListener("click", () => requestWinner(sub.subId));
+        reveloLista.appendChild(btn);
+      }
+      return;
+    }
+
+    if (state.phase === "roundEnd") {
+      reveloEl.classList.remove("hidden");
+      reveloTitulo.textContent = "Todas las cartas de la ronda";
+      reveloLista.innerHTML = "";
+      for (const sub of state.reveal ?? []) {
+        const div = document.createElement("div");
+        const isWinner = state.winner && sub.card.id === state.winner.card.id;
+        div.className =
+          "card-face flex min-h-20 items-center p-4 font-bold " +
+          (isWinner ? "bg-mustard text-ink" : "bg-paper text-ink/70");
+        div.textContent = sub.card.text + (isWinner ? " 🏆" : "");
+        reveloLista.appendChild(div);
+      }
+
+      zonaEstado.textContent = "";
+      resultadoEl.classList.remove("hidden");
+      resultadoEl.classList.add("flex");
+      resultadoCarta.textContent = state.winner
+        ? `Ganó ${state.winner.name} con: "${state.winner.card.text}"`
+        : "";
+    }
+  }
+
+  // --- Conexión P2P y motor del juego (van después de render(): ambos lo
+  // llaman apenas se conectan, así que render() y el DOM ya deben existir) ---
+
+  const room: Room = connectToRoom(code);
+  const [sendJoin, getJoin] = room.makeAction<{ token: string; name: string }>("join");
+  const [sendState, getState] = room.makeAction<PersonalizedState>("state");
+  const [sendPlay, getPlay] = room.makeAction<{ cardId: string }>("play");
+  const [sendWinner, getWinner] = room.makeAction<{ subId: string }>("winner");
+  const [sendAdvance, getAdvance] = room.makeAction<Record<string, never>>("advance");
+
+  let engine: HostEngine | null = null;
+
+  function broadcastAll() {
+    if (!engine) return;
+    for (const t of engine.getAllTokens()) {
+      const state = engine.getStateFor(t);
+      if (t === token) {
+        render(state);
+        continue;
+      }
+      const peerId = engine.peerForToken(t);
+      if (peerId) sendState(state, peerId);
+    }
+  }
+
+  if (isHost) {
+    const deckId = params.get("deck") ?? "CLASICO";
+    const handSize = parseInt(params.get("hand") ?? "8", 10);
+    const targetScore = parseInt(params.get("target") ?? "0", 10);
+
+    engine = new HostEngine(deckId, handSize, targetScore, code);
+    engine.addOrUpdatePlayer(token, "host-local", name);
+
+    room.onPeerJoin(() => broadcastAll());
+    room.onPeerLeave((peerId) => {
+      engine!.markDisconnected(peerId);
+      broadcastAll();
+    });
+
+    getJoin((data, peerId) => {
+      engine!.addOrUpdatePlayer(data.token, peerId, data.name);
+      broadcastAll();
+    });
+    getPlay((data, peerId) => {
+      const t = engine!.tokenForPeer(peerId);
+      if (!t) return;
+      engine!.playCard(t, data.cardId);
+      broadcastAll();
+    });
+    getWinner((data, peerId) => {
+      const t = engine!.tokenForPeer(peerId);
+      if (!t) return;
+      engine!.pickWinner(t, data.subId);
+      broadcastAll();
+    });
+    getAdvance((_data, peerId) => {
+      const t = engine!.tokenForPeer(peerId);
+      if (!t) return;
+      engine!.advance(t);
+      broadcastAll();
+    });
+
+    conectandoEl.classList.add("hidden");
+    broadcastAll();
+  } else {
+    room.onPeerJoin(() => {
+      sendJoin({ token, name });
+    });
+    getState((state) => {
+      conectandoEl.classList.add("hidden");
+      render(state);
+    });
+  }
+
+  // --- Acciones locales de UI (host las procesa directo, invitados las mandan) ---
+
+  function requestStart() {
+    if (isHost) {
+      engine!.start();
+      broadcastAll();
+    }
+  }
+
+  function requestPlay(cardId: string) {
+    if (isHost) {
+      engine!.playCard(token, cardId);
+      broadcastAll();
+    } else {
+      sendPlay({ cardId });
+    }
+  }
+
+  function requestWinner(subId: string) {
+    if (isHost) {
+      engine!.pickWinner(token, subId);
+      broadcastAll();
+    } else {
+      sendWinner({ subId });
+    }
+  }
+
+  function requestAdvance() {
+    if (isHost) {
+      engine!.advance(token);
+      broadcastAll();
+    } else {
+      sendAdvance({});
+    }
+  }
+
+  // --- Copiar / compartir código (solo relevante en lobby, como anfitrión) ---
+
+  const btnCopiar = document.getElementById("btn-copiar") as HTMLButtonElement;
+  const btnCompartir = document.getElementById("btn-compartir") as HTMLButtonElement;
+  const copiadoEl = document.getElementById("copiado")!;
+
+  btnCopiar.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      copiadoEl.classList.remove("hidden");
+      setTimeout(() => copiadoEl.classList.add("hidden"), 1500);
+    } catch {
+      // si el navegador bloquea el clipboard, no rompemos el flujo
+    }
+  });
+
+  if (navigator.share) {
+    btnCompartir.classList.remove("hidden");
+    btnCompartir.addEventListener("click", () => {
+      navigator
+        .share({
+          title: "Cartas de Mesa",
+          text: `Unite a la partida con el código: ${code}`,
+          url: `${window.location.origin}/unirse?code=${encodeURIComponent(code)}`,
+        })
+        .catch(() => {
+          // el usuario canceló el share sheet
+        });
+    });
+  }
+
+  window.addEventListener("beforeunload", () => {
+    room.leave();
+  });
+</script>

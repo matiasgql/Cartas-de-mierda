@@ -1,0 +1,121 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { DECK_LIST } from "../data/decks";
+import { MIN_HAND, MAX_HAND } from "../lib/p2p/constants";
+---
+
+<Layout title="Crear partida — Cartas de Mesa">
+  <main class="flex flex-1 flex-col gap-6 py-8">
+    <a href="/" class="text-sm text-mist">← Volver</a>
+    <h1 class="font-display text-2xl font-black">Armá la partida</h1>
+    <p class="text-sm text-mist">
+      Se conecta en vivo por WebRTC (necesita internet): cada uno entra con
+      el código, juega su carta y vos como anfitrión elegís la ganadora de
+      cada ronda.
+    </p>
+
+    <form id="form-crear" class="flex flex-1 flex-col gap-6">
+      <label class="flex flex-col gap-2">
+        <span class="font-display font-bold">Tu nombre</span>
+        <input
+          id="input-nombre"
+          type="text"
+          maxlength="20"
+          autocomplete="off"
+          placeholder="Ej: Juan"
+          required
+          class="card-face bg-paper px-4 py-3 font-display font-bold text-ink placeholder:text-ink/40"
+        />
+      </label>
+
+      <fieldset class="flex flex-col gap-3">
+        <legend class="mb-1 font-display font-bold text-paper">Mazo</legend>
+        {
+          DECK_LIST.map((deck, i) => (
+            <label class="card-face flex cursor-pointer flex-col gap-1 bg-paper px-4 py-3 text-ink has-[:checked]:bg-mustard">
+              <span class="flex items-center gap-2 font-display font-bold">
+                <input
+                  type="radio"
+                  name="deck"
+                  value={deck.id}
+                  checked={i === 0}
+                  class="accent-ink"
+                />
+                {deck.name}
+              </span>
+              <span class="text-sm text-ink/70">{deck.description}</span>
+            </label>
+          ))
+        }
+      </fieldset>
+
+      <label class="flex flex-col gap-2">
+        <span class="font-display font-bold">
+          Cartas por mano: <span id="valor-mano">8</span>
+        </span>
+        <input
+          id="input-mano"
+          type="range"
+          min={MIN_HAND}
+          max={MAX_HAND}
+          value="8"
+          class="accent-mustard"
+        />
+      </label>
+
+      <label class="flex flex-col gap-2">
+        <span class="font-display font-bold">
+          Puntos para ganar: <span id="valor-meta">Sin límite</span>
+        </span>
+        <input id="input-meta" type="range" min="0" max="15" value="0" class="accent-mustard" />
+      </label>
+
+      <button
+        type="submit"
+        class="card-face mt-auto bg-mustard px-6 py-5 font-display text-lg font-bold text-ink transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+      >
+        Crear sala
+      </button>
+    </form>
+  </main>
+</Layout>
+
+<script>
+  import { generateRoomCode } from "../lib/p2p/roomCode";
+  import { saveDeviceName, loadDeviceName } from "../lib/p2p/room";
+
+  const form = document.getElementById("form-crear") as HTMLFormElement;
+  const nombreInput = document.getElementById("input-nombre") as HTMLInputElement;
+  const manoInput = document.getElementById("input-mano") as HTMLInputElement;
+  const metaInput = document.getElementById("input-meta") as HTMLInputElement;
+  const valorMano = document.getElementById("valor-mano")!;
+  const valorMeta = document.getElementById("valor-meta")!;
+
+  nombreInput.value = loadDeviceName();
+
+  manoInput.addEventListener("input", () => {
+    valorMano.textContent = manoInput.value;
+  });
+  metaInput.addEventListener("input", () => {
+    valorMeta.textContent = metaInput.value === "0" ? "Sin límite" : metaInput.value;
+  });
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const nombre = nombreInput.value.trim() || "Anfitrión";
+    saveDeviceName(nombre);
+
+    const deckId = (form.elements.namedItem("deck") as RadioNodeList).value;
+    const code = generateRoomCode();
+
+    const url = new URL("/sala", window.location.origin);
+    url.searchParams.set("code", code);
+    url.searchParams.set("host", "1");
+    url.searchParams.set("name", nombre);
+    url.searchParams.set("deck", deckId);
+    url.searchParams.set("hand", manoInput.value);
+    url.searchParams.set("target", metaInput.value);
+
+    window.location.href = url.toString();
+  });
+</script>

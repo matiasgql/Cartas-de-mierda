@@ -1,0 +1,76 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Unirme — Cartas de Mesa">
+  <main class="flex flex-1 flex-col justify-center gap-6 py-8">
+    <a href="/" class="text-sm text-mist">← Volver</a>
+
+    <h1 class="font-display text-2xl font-black">Unite a la partida</h1>
+    <p class="text-mist">Necesitás el código y estar conectado a internet.</p>
+
+    <form id="form-unirse" class="flex flex-col gap-4">
+      <input
+        id="input-codigo"
+        type="text"
+        inputmode="text"
+        autocomplete="off"
+        autocapitalize="characters"
+        placeholder="Código de sala"
+        class="card-face bg-paper px-4 py-4 text-center font-display text-lg font-bold text-ink placeholder:text-ink/40"
+      />
+      <input
+        id="input-nombre"
+        type="text"
+        maxlength="20"
+        autocomplete="off"
+        placeholder="Tu nombre"
+        required
+        class="card-face bg-paper px-4 py-3 font-display font-bold text-ink placeholder:text-ink/40"
+      />
+      <button
+        type="submit"
+        class="card-face bg-mustard px-6 py-5 font-display text-lg font-bold text-ink transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+      >
+        Continuar
+      </button>
+      <p id="error" class="hidden text-center text-coral">Ingresá un código y tu nombre.</p>
+    </form>
+  </main>
+</Layout>
+
+<script>
+  import { isValidRoomCode, normalizeRoomCode } from "../lib/p2p/roomCode";
+  import { saveDeviceName, loadDeviceName } from "../lib/p2p/room";
+
+  const form = document.getElementById("form-unirse") as HTMLFormElement;
+  const codigoInput = document.getElementById("input-codigo") as HTMLInputElement;
+  const nombreInput = document.getElementById("input-nombre") as HTMLInputElement;
+  const errorEl = document.getElementById("error")!;
+
+  nombreInput.value = loadDeviceName();
+
+  // Si llegó por un link compartido (/unirse?code=ABCDE), precarga el código.
+  const params = new URLSearchParams(window.location.search);
+  const codeFromUrl = params.get("code");
+  if (codeFromUrl) codigoInput.value = normalizeRoomCode(codeFromUrl);
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const code = normalizeRoomCode(codigoInput.value);
+    const nombre = nombreInput.value.trim();
+
+    if (!isValidRoomCode(code) || !nombre) {
+      errorEl.classList.remove("hidden");
+      return;
+    }
+
+    saveDeviceName(nombre);
+
+    const url = new URL("/sala", window.location.origin);
+    url.searchParams.set("code", code);
+    url.searchParams.set("name", nombre);
+
+    window.location.href = url.toString();
+  });
+</script>

@@ -1,0 +1,42 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Cartas de Mesa">
+  <main class="flex flex-1 flex-col justify-center gap-10 py-10">
+    <header class="text-center">
+      <p class="font-display text-sm tracking-wide text-mist">Para jugar entre celulares</p>
+      <h1 class="mt-2 font-display text-4xl font-black leading-tight text-paper">
+        Cartas de<br />Mesa
+      </h1>
+      <p class="mt-4 text-balance text-mist">
+        Juegos de cartas para reírse en grupo, tipo HDP o Amigos de Mierda,
+        jugados en vivo entre celulares por WebRTC. Sin apps que instalar, sin
+        servidor propio: solo un código para compartir (necesita internet).
+      </p>
+    </header>
+
+    <div class="flex flex-col gap-4">
+      <a
+        href="/crear"
+        class="card-face flex items-center justify-between bg-mustard px-6 py-5 font-display text-lg font-bold text-ink transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+      >
+        Crear partida
+        <span aria-hidden="true">→</span>
+      </a>
+      <a
+        href="/unirse"
+        class="card-face flex items-center justify-between bg-paper px-6 py-5 font-display text-lg font-bold text-ink transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+      >
+        Unirme con un código
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
+
+    <p class="text-center text-sm text-mist">
+      Uno arma la partida y comparte un código corto. El resto lo ingresa,
+      y la ronda se juega en vivo: cada uno elige su carta, el anfitrión
+      juzga y los puntos se actualizan para todos al toque.
+    </p>
+  </main>
+</Layout>

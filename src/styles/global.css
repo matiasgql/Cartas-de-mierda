@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-body: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+
+  --color-ink: #1c1425;
+  --color-ink-2: #241a30;
+  --color-paper: #f6f1e4;
+  --color-paper-dim: #e9e1cd;
+  --color-mustard: #e8b23d;
+  --color-mustard-dim: #b98a26;
+  --color-coral: #ff5d5d;
+  --color-coral-dim: #cc3f3f;
+  --color-mist: #c9c0d6;
+}
+
+html {
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  /* Evita el zoom accidental al doble-tocar en iOS dentro del juego. */
+  touch-action: manipulation;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+::selection {
+  background: var(--color-mustard);
+  color: var(--color-ink);
+}
+
+/* Look de "carta física": borde grueso, esquinas redondeadas suaves,
+   sombra dura en vez del degradé difuso típico de tarjetas SaaS. */
+.card-face {
+  border-radius: 0.9rem;
+  border: 3px solid var(--color-ink);
+  box-shadow: 6px 6px 0 var(--color-ink);
+}
