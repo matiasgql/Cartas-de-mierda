@@ -7,7 +7,7 @@ import tailwindcss from '@tailwindcss/vite';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://matiasgql.github.io',
-  base: '/Cartas-de-mierda',
+  base: '/Cartas-de-mierda/',
   vite: {
     plugins: [tailwindcss(), mkcert()]
   }
