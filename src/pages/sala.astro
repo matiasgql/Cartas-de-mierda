@@ -5,13 +5,13 @@ import Layout from "../layouts/Layout.astro";
 <Layout title="Sala — Cartas de Mesa">
   <main class="flex flex-1 flex-col gap-4 py-6">
     <div class="flex items-center justify-between text-sm text-mist">
-      <a href="/" id="link-salir">Salir</a>
+      <a href={import.meta.env.BASE_URL} id="link-salir">Salir</a>
       <span id="etiqueta-codigo" class="font-display font-bold text-paper"></span>
       <span id="etiqueta-ronda"></span>
     </div>
 
     <p id="error" class="hidden text-center text-coral">
-      Esa sala no es válida. <a href="/" class="underline">Volver al inicio</a>
+      Esa sala no es válida. <a href={import.meta.env.BASE_URL} class="underline">Volver al inicio</a>
     </p>
 
     <p id="conectando" class="text-center text-mist">Conectando con la sala…</p>
@@ -97,7 +97,7 @@ import Layout from "../layouts/Layout.astro";
       <h1 class="text-center font-display text-2xl font-black">¡Se terminó la partida!</h1>
       <div id="ranking-final" class="flex flex-col gap-2"></div>
       <a
-        href="/"
+        href={import.meta.env.BASE_URL}
         class="card-face mt-auto bg-mustard py-4 text-center font-display font-bold text-ink active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
       >
         Volver al inicio
@@ -434,7 +434,7 @@ import Layout from "../layouts/Layout.astro";
         .share({
           title: "Cartas de Mesa",
           text: `Unite a la partida con el código: ${code}`,
-          url: `${window.location.origin}/unirse?code=${encodeURIComponent(code)}`,
+          url: `${window.location.origin}${import.meta.env.BASE_URL}unirse?code=${encodeURIComponent(code)}`,
         })
         .catch(() => {
           // el usuario canceló el share sheet
