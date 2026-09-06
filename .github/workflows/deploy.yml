@@ -1,25 +1,20 @@
 name: Deploy to GitHub Pages
 
 on:
-  # Se dispara automáticamente cuando hacés push a main
   push:
     branches: ["main"]
-  # También permite ejecutarlo manualmente desde la pestaña Actions
   workflow_dispatch:
 
-# Permisos necesarios para GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Evita que se pisen deploys si hacés varios push seguidos
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Job 1: Build
   build:
     runs-on: ubuntu-latest
     steps:
@@ -40,9 +35,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist   # Carpeta que genera Astro
+          path: ./dist
 
-  # Job 2: Deploy
   deploy:
     environment:
       name: github-pages
