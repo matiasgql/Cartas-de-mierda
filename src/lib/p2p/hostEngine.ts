@@ -11,6 +11,9 @@ import { createRng, shuffle } from "../rng";
  *
  * Si el anfitrión cierra la app, la partida se corta (no hay migración de
  * anfitrión todavía); es la contra de no depender de un servidor real.
+ *
+ * Modo "libre": en vez de cartas blancas, cada jugador escribe una respuesta
+ * de texto libre. handSize = 0 indica ese modo.
  */
 
 export const MIN_PLAYERS = 3;
@@ -58,6 +61,8 @@ export interface PersonalizedState {
   winner: { name: string; card: Card } | null;
   gameOverRanking: { name: string; score: number }[] | null;
   canStart: boolean;
+  /** true cuando no hay cartas blancas: cada uno escribe su respuesta */
+  freeMode: boolean;
 }
 
 export class HostEngine {
@@ -65,6 +70,7 @@ export class HostEngine {
   private handSize: number;
   private targetScore: number;
   private roomCode: string;
+  private freeMode: boolean;
 
   private whitePool: Card[] = [];
   private blackPool: Card[] = [];
@@ -87,9 +93,11 @@ export class HostEngine {
     this.handSize = handSize;
     this.targetScore = targetScore;
     this.roomCode = roomCode;
+    this.freeMode = handSize <= 0;
   }
 
   private refillWhite() {
+    if (this.freeMode) return;
     const deck = getDeck(this.deckId)!;
     this.whitePool = shuffle(deck.white, createRng(Math.floor(Math.random() * 0xffffffff)));
   }
@@ -132,7 +140,7 @@ export class HostEngine {
 
     // Alguien se suma con la partida ya arrancada: le damos mano completa
     // y entra en la rotación de jueces a partir de la próxima vuelta.
-    if (this.phase !== "lobby") {
+    if (this.phase !== "lobby" && !this.freeMode) {
       for (let i = 0; i < this.handSize; i++) record.hand.push(this.drawWhite());
     }
   }
@@ -163,7 +171,9 @@ export class HostEngine {
     for (const token of this.order) {
       const p = this.players.get(token)!;
       p.hand = [];
-      for (let i = 0; i < this.handSize; i++) p.hand.push(this.drawWhite());
+      if (!this.freeMode) {
+        for (let i = 0; i < this.handSize; i++) p.hand.push(this.drawWhite());
+      }
     }
     this.judgeIdx = 0;
     this.round = 1;
@@ -174,6 +184,7 @@ export class HostEngine {
 
   /** Un jugador (no juez) juega una carta de su mano. */
   playCard(token: string, cardId: string) {
+    if (this.freeMode) return;
     if (this.phase !== "playing") return;
     if (token === this.currentJudgeToken()) return;
     if (this.pendingSubs.has(token)) return;
@@ -184,6 +195,30 @@ export class HostEngine {
     if (idx === -1) return;
 
     const [card] = p.hand.splice(idx, 1);
+    this.pendingSubs.set(token, card);
+    this.checkReadyForJudging();
+  }
+
+  /**
+   * Modo libre: el jugador envía un texto como respuesta.
+   * Se convierte en una "carta" efímera para reutilizar el flujo de juzgar.
+   */
+  playText(token: string, text: string) {
+    if (!this.freeMode) return;
+    if (this.phase !== "playing") return;
+    if (token === this.currentJudgeToken()) return;
+    if (this.pendingSubs.has(token)) return;
+
+    const trimmed = text.trim().slice(0, 280);
+    if (!trimmed) return;
+
+    const p = this.players.get(token);
+    if (!p) return;
+
+    const card: Card = {
+      id: `free-${token}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      text: trimmed,
+    };
     this.pendingSubs.set(token, card);
     this.checkReadyForJudging();
   }
@@ -234,7 +269,9 @@ export class HostEngine {
   private nextRound() {
     for (const token of this.order) {
       const p = this.players.get(token)!;
-      while (p.hand.length < this.handSize) p.hand.push(this.drawWhite());
+      if (!this.freeMode) {
+        while (p.hand.length < this.handSize) p.hand.push(this.drawWhite());
+      }
     }
     this.judgeIdx = (this.judgeIdx + 1) % this.order.length;
     this.round += 1;
@@ -301,6 +338,7 @@ export class HostEngine {
           ? [...this.players.values()].sort((a, b) => b.score - a.score).map((p) => ({ name: p.name, score: p.score }))
           : null,
       canStart: this.canStart(),
+      freeMode: this.freeMode,
     };
   }
 }

@@ -7,8 +7,8 @@ import { MIN_HAND, MAX_HAND } from "../lib/p2p/constants";
 <Layout title="Crear partida — Cartas de Mesa">
   <main class="flex flex-1 flex-col gap-6 py-8">
     <a href={import.meta.env.BASE_URL} class="text-sm text-mist">← Volver</a>
-    <h1 class="font-display text-2xl font-black">Armá la partida</h1>
-    <p class="text-sm text-mist">
+    <h1 class="font-display text-2xl font-black" id="titulo-crear">Armá la partida</h1>
+    <p class="text-sm text-mist" id="desc-crear">
       Se conecta en vivo por WebRTC (necesita internet): cada uno entra con
       el código, juega su carta y vos como anfitrión elegís la ganadora de
       cada ronda.
@@ -49,7 +49,7 @@ import { MIN_HAND, MAX_HAND } from "../lib/p2p/constants";
         }
       </fieldset>
 
-      <label class="flex flex-col gap-2">
+      <label id="label-mano" class="flex flex-col gap-2">
         <span class="font-display font-bold">
           Cartas por mano: <span id="valor-mano">8</span>
         </span>
@@ -84,12 +84,25 @@ import { MIN_HAND, MAX_HAND } from "../lib/p2p/constants";
   import { generateRoomCode } from "../lib/p2p/roomCode";
   import { saveDeviceName, loadDeviceName } from "../lib/p2p/room";
 
+  const params = new URLSearchParams(window.location.search);
+  const isLibre = params.get("modo") === "libre";
+
   const form = document.getElementById("form-crear") as HTMLFormElement;
   const nombreInput = document.getElementById("input-nombre") as HTMLInputElement;
   const manoInput = document.getElementById("input-mano") as HTMLInputElement;
   const metaInput = document.getElementById("input-meta") as HTMLInputElement;
   const valorMano = document.getElementById("valor-mano")!;
   const valorMeta = document.getElementById("valor-meta")!;
+  const labelMano = document.getElementById("label-mano")!;
+  const titulo = document.getElementById("titulo-crear")!;
+  const desc = document.getElementById("desc-crear")!;
+
+  if (isLibre) {
+    titulo.textContent = "Respuestas libres";
+    desc.textContent =
+      "Igual que el juego de cartas, pero en vez de elegir una carta cada uno escribe su propia respuesta. El juez elige la mejor. Se conecta en vivo por WebRTC (necesita internet).";
+    labelMano.classList.add("hidden");
+  }
 
   nombreInput.value = loadDeviceName();
 
@@ -113,8 +126,9 @@ import { MIN_HAND, MAX_HAND } from "../lib/p2p/constants";
     url.searchParams.set("host", "1");
     url.searchParams.set("name", nombre);
     url.searchParams.set("deck", deckId);
-    url.searchParams.set("hand", manoInput.value);
+    url.searchParams.set("hand", isLibre ? "0" : manoInput.value);
     url.searchParams.set("target", metaInput.value);
+    if (isLibre) url.searchParams.set("modo", "libre");
 
     window.location.href = url.toString();
   });

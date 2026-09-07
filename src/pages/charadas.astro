@@ -1,0 +1,213 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Charadas — Cartas de Mesa">
+  <main class="relative flex flex-1 flex-col py-6">
+    <div class="flex items-center justify-between text-sm text-mist">
+      <a href={import.meta.env.BASE_URL} id="link-salir">Salir</a>
+      <span class="font-display font-bold text-paper">Charadas</span>
+      <span class="w-10"></span>
+    </div>
+
+    <div
+      id="pantalla"
+      class="flex flex-1 flex-col items-center justify-center gap-6"
+    >
+      <p class="text-center text-sm text-mist">
+        Pasá el celu a quien actúa. El resto adivina en persona.
+      </p>
+
+      <div
+        id="nombre-box"
+        class="flex min-h-40 w-full items-center justify-center px-4"
+      >
+        <p
+          id="nombre"
+          class="font-display text-center text-4xl font-black leading-tight text-paper sm:text-5xl"
+          style="writing-mode: horizontal-tb;"
+        >
+        </p>
+      </div>
+
+      <p id="pista" class="text-center text-xs text-mist/70">
+        Tocá la flecha para el siguiente
+      </p>
+    </div>
+
+    <!-- Botón redondo de continuar en la esquina inferior derecha -->
+    <button
+      id="btn-siguiente"
+      type="button"
+      aria-label="Siguiente nombre"
+      class="fixed bottom-6 right-6 z-10 flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-ink bg-mustard font-display text-2xl font-black text-ink shadow-[4px_4px_0_var(--color-ink)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+      style="bottom: max(1.5rem, env(safe-area-inset-bottom)); right: max(1.5rem, env(safe-area-inset-right));"
+    >
+      →
+    </button>
+  </main>
+</Layout>
+
+<script>
+  /**
+   * Nombres "funables" / memables para charadas en grupo.
+   * Mezcla de figuras argentinas e internacionales que suelen generar
+   * reacciones fuertes o son fáciles de actuar / adivinar.
+   */
+  const NOMBRES = [
+    "Lionel Messi",
+    "Diego Maradona",
+    "Cristina Kirchner",
+    "Javier Milei",
+    "Susana Giménez",
+    "Mirtha Legrand",
+    "Ricardo Fort",
+    "Wanda Nara",
+    "Mauro Icardi",
+    "El Dibu Martínez",
+    "Ángel Di María",
+    "Lali Espósito",
+    "Tini Stoessel",
+    "Coscu",
+    "Momo",
+    "Ibai Llanos",
+    "AuronPlay",
+    "El Rubius",
+    "Bad Bunny",
+    "Taylor Swift",
+    "Elon Musk",
+    "Donald Trump",
+    "Joe Biden",
+    "Vladimir Putin",
+    "Kim Kardashian",
+    "Kanye West",
+    "Rihanna",
+    "Shakira",
+    "Piqué",
+    "Gerardo Sofovich",
+    "Carlitos Balá",
+    "Moria Casán",
+    "Jorge Rial",
+    "Marcelo Tinelli",
+    "Showmatch",
+    "El Chavo del 8",
+    "Don Ramón",
+    "Chapulín Colorado",
+    "Homero Simpson",
+    "Bart Simpson",
+    "Goku",
+    "Vegeta",
+    "Naruto",
+    "Harry Potter",
+    "Darth Vader",
+    "Spider-Man",
+    "Batman",
+    "Iron Man",
+    "Thanos",
+    "Michael Jackson",
+    "Freddie Mercury",
+    "Elvis Presley",
+    "Madonna",
+    "Lady Gaga",
+    "Beyoncé",
+    "Justin Bieber",
+    "Ariana Grande",
+    "Duki",
+    "Bizarrap",
+    "Nicki Nicole",
+    "María Becerra",
+    "L-Gante",
+    "El Noba",
+    "Cazzu",
+    "Paulo Londra",
+    "Wos",
+    "Trueno",
+    "Residente",
+    "Calle 13",
+    "Luis Miguel",
+    "Ricardo Arjona",
+    "Diego Torres",
+    "Abel Pintos",
+    "La Sole",
+    "Tini",
+    "China Suárez",
+    "Benjamín Vicuña",
+    "Pampita",
+    "Fátima Florez",
+    "Naiara Awada",
+    "Karina 'La Princesita'",
+    "El Polaco",
+    "Antonio Ríos",
+    "Rodrigo 'El Potro'",
+    "Gilda",
+    "Ráfaga",
+    "Los Palmeras",
+    "Leo Mattioli",
+    "Yerba Brava",
+    "Damas Gratis",
+    "Pablo Lescano",
+    "El Pity Álvarez",
+    "Andrés Calamaro",
+    "Charly García",
+    "Luis Alberto Spinetta",
+    "Gustavo Cerati",
+    "Fito Páez",
+    "Indio Solari",
+    "La Renga",
+    "Los Redondos",
+    "Patricio Rey",
+    "Luciano Castro",
+    "Juan Darthés",
+    "Thelma Fardin",
+    "Florencia Peña",
+    "Graciela Alfano",
+    "Susana Traverso",
+    "Moria",
+    "Carmen Barbieri",
+    "Santiago del Moro",
+    "Guido Kaczka",
+    "Marley",
+    "Andy Kusnetzoff",
+    "Majul",
+    "Lanata",
+    "Viviana Canosa",
+    "Luis Ventura",
+    "Chiche Gelblung",
+    "América TV",
+    "Telefe",
+    "El Trece",
+    "TN",
+    "C5N",
+    "Olga",
+    "Luzu TV",
+    "Twitch",
+    "TikTok",
+    "Instagram",
+    "OnlyFans",
+    "ChatGPT",
+    "Grok",
+    "Siri",
+    "Alexa",
+  ];
+
+  const nombreEl = document.getElementById("nombre")!;
+  const btnSiguiente = document.getElementById("btn-siguiente")!;
+
+  let usados = new Set<number>();
+
+  function siguiente() {
+    if (usados.size >= NOMBRES.length) usados.clear();
+
+    let idx: number;
+    do {
+      idx = Math.floor(Math.random() * NOMBRES.length);
+    } while (usados.has(idx));
+
+    usados.add(idx);
+    nombreEl.textContent = NOMBRES[idx];
+  }
+
+  btnSiguiente.addEventListener("click", siguiente);
+  // Primer nombre al cargar
+  siguiente();
+</script>

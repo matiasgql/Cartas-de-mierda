@@ -3,16 +3,15 @@ import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout title="Cartas de Mesa">
-  <main class="flex flex-1 flex-col justify-center gap-10 py-10">
+  <main class="flex flex-1 flex-col justify-center gap-8 py-10">
     <header class="text-center">
       <p class="font-display text-sm tracking-wide text-mist">Para jugar entre celulares</p>
       <h1 class="mt-2 font-display text-4xl font-black leading-tight text-paper">
         Cartas de<br />Mesa
       </h1>
       <p class="mt-4 text-balance text-mist">
-        Juegos de cartas para reírse en grupo, tipo HDP o Amigos de Mierda,
-        jugados en vivo entre celulares por WebRTC. Sin apps que instalar, sin
-        servidor propio: solo un código para compartir (necesita internet).
+        Juegos de fiesta para reírse en grupo. Cartas tipo HDP, respuestas
+        libres y charadas. Sin apps que instalar.
       </p>
     </header>
 
@@ -21,12 +20,26 @@ import Layout from "../layouts/Layout.astro";
         href={`${import.meta.env.BASE_URL}crear`}
         class="card-face flex items-center justify-between bg-mustard px-6 py-5 font-display text-lg font-bold text-ink transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
       >
-        Crear partida
+        Cartas (HDP / Amigos de Mierda)
+        <span aria-hidden="true">→</span>
+      </a>
+      <a
+        href={`${import.meta.env.BASE_URL}crear?modo=libre`}
+        class="card-face flex items-center justify-between bg-paper px-6 py-5 font-display text-lg font-bold text-ink transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+      >
+        Respuestas libres
+        <span aria-hidden="true">→</span>
+      </a>
+      <a
+        href={`${import.meta.env.BASE_URL}charadas`}
+        class="card-face flex items-center justify-between bg-paper px-6 py-5 font-display text-lg font-bold text-ink transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+      >
+        Charadas
         <span aria-hidden="true">→</span>
       </a>
       <a
         href={`${import.meta.env.BASE_URL}unirse`}
-        class="card-face flex items-center justify-between bg-paper px-6 py-5 font-display text-lg font-bold text-ink transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+        class="card-face flex items-center justify-between border-2 border-mist/30 bg-ink-2 px-6 py-4 font-display text-base font-bold text-paper transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
       >
         Unirme con un código
         <span aria-hidden="true">→</span>
@@ -34,9 +47,9 @@ import Layout from "../layouts/Layout.astro";
     </div>
 
     <p class="text-center text-sm text-mist">
-      Uno arma la partida y comparte un código corto. El resto lo ingresa,
-      y la ronda se juega en vivo: cada uno elige su carta, el anfitrión
-      juzga y los puntos se actualizan para todos al toque.
+      En <strong class="text-paper">Cartas</strong> y <strong class="text-paper">Respuestas libres</strong>
+      uno arma la partida y comparte un código. En <strong class="text-paper">Charadas</strong>
+      alcanza con un solo celular: se muestra el nombre y el resto adivina en persona.
     </p>
   </main>
 </Layout>

@@ -28,8 +28,55 @@ const RELAY_URLS = [
   "wss://open.ftorrent.com",
 ];
 
+/** STUN públicos + OpenRelay (TURN gratuito). Más opciones = más chances de conectar. */
+const ICE_SERVERS: RTCIceServer[] = [
+  // Google STUN (varios por si uno falla)
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:19302" },
+  { urls: "stun:stun3.l.google.com:19302" },
+  { urls: "stun:stun4.l.google.com:19302" },
+  // Cloudflare STUN
+  { urls: "stun:stun.cloudflare.com:3478" },
+  // OpenRelay STUN
+  { urls: "stun:stun.relay.metered.ca:80" },
+  // OpenRelay TURN (UDP + TCP + TLS) — fallback cuando no hay P2P directo
+  {
+    urls: [
+      "turn:openrelay.metered.ca:80",
+      "turn:openrelay.metered.ca:443",
+      "turn:openrelay.metered.ca:443?transport=tcp",
+      "turns:openrelay.metered.ca:443",
+    ],
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+];
+
 export type { Room };
 export { selfId };
+
+/** ¿Este browser tiene WebRTC básico? (Xiaomi browser nativo suele fallar acá) */
+export function supportsWebRTC(): boolean {
+  return (
+    typeof RTCPeerConnection !== "undefined" &&
+    typeof RTCSessionDescription !== "undefined" &&
+    typeof RTCIceCandidate !== "undefined"
+  );
+}
+
+/** Chequeo un poco más fuerte: data channels (lo que usa Trystero). */
+export function supportsWebRTCDataChannel(): boolean {
+  if (!supportsWebRTC()) return false;
+  try {
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    const ok = typeof pc.createDataChannel === "function";
+    pc.close();
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 export function connectToRoom(roomCode: string): Room {
   return joinRoom(
@@ -38,24 +85,12 @@ export function connectToRoom(roomCode: string): Room {
       relayUrls: RELAY_URLS,
       relayRedundancy: 3,
       rtcConfig: {
-        iceServers: [
-          { urls: "stun:stun.l.google.com:19302" },
-          {
-            urls: [
-              "turn:openrelay.metered.ca:80",
-              "turn:openrelay.metered.ca:443",
-              "turn:openrelay.metered.ca:443?transport=tcp",
-            ],
-            username: "openrelayproject",
-            credential: "openrelayproject",
-          },
-        ],
+        iceServers: ICE_SERVERS,
       },
     },
     `sala-${roomCode.toLowerCase()}`
   );
 }
-
 /**
  * Identidad persistente por dispositivo (no por conexión). El `peerId` de
  * Trystero cambia cada vez que alguien entra a la sala (por ejemplo, si se
